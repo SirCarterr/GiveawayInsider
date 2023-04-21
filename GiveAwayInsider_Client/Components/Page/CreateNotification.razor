@@ -1,0 +1,129 @@
+﻿@inject INotificationService _notificationService
+@inject AuthenticationStateProvider _authStateProvider
+@inject ILocalStorageService _localStorageService
+
+@if (!IsLoading)
+{
+    <div class="modal show" id="ModalCreateNotification" style="display:block; background-color: rgba(66, 66, 66, .5)">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="@(CurrentSettings.Theme.Equals("light") ? "" : "background-color: rgb(120, 120, 120)")">
+                <EditForm Model="NotificationDTO" OnValidSubmit="Create">
+                    <DataAnnotationsValidator></DataAnnotationsValidator>
+                    <div class="modal-header">
+                        <h5 class="modal-title @(CurrentSettings.Theme.Equals("light") ? "" : "text-white")" id="ModalCreateLabel">Create Notification</h5>
+                        <button type="button" @onclick="@ModalCancel" class="btn-close @(CurrentSettings.Theme.Equals("light") ? "" : "text-white")" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (ShowErrors)
+                        {
+                            <div>
+                                @foreach (var error in Errors)
+                                {
+                                    <p class="text-danger text-center">@error</p>
+                                }
+                            </div>
+                        }
+
+                        <div class="py-2">
+                            <InputText @bind-Value="NotificationDTO.Search" class="form-control" placeholder="Phrase..." />
+                            <ValidationMessage For="(() => NotificationDTO.Search)" />
+                        </div>
+                        <div class="py-2">
+                            <small class="@(CurrentSettings.Theme.Equals("light") ? "text-secondary" : "text-white")">steam, epic-game-store, e.g. (whitespaces replace with '-', if 2+ platforms type with '.')</small>
+                            <InputText @bind-Value="NotificationDTO.Platform" class="form-control" placeholder="Platform..." />
+                            <ValidationMessage For="(() => NotificationDTO.Platform)" />
+                        </div>
+                        <div class="py-2">
+                            <small class="@(CurrentSettings.Theme.Equals("light") ? "text-secondary" : "text-white")">dlc, game, beta, loot, e.g.</small>
+                            <InputText @bind-Value="NotificationDTO.Type" class="form-control" placeholder="Type... (game, dlc...)" />
+                            <ValidationMessage For="(() => NotificationDTO.Type)" />
+                        </div>
+                        <div class="py-2">
+                            <InputSelect @bind-Value="NotificationDTO.Sort" class="form-control" placeholder="Sort by..." >
+                                <option selected value="">None</option>
+                                <option value="popularity">Popularity</option>
+                                <option value="date">Date</option>
+                                <option value="value">Value</option>
+                            </InputSelect>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        @if (IsProcessing)
+                        {
+                            <button type="submit" class="btn @(CurrentSettings.Theme.Equals("light") ? "btn-outline-dark" : "btn-primary")" disabled>Create</button>
+                        }
+                        else
+                        {
+                            <button type="submit" class="btn @(CurrentSettings.Theme.Equals("light") ? "btn-outline-dark" : "btn-primary")">Create</button>
+                        }
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public EventCallback<bool> OnClose { get; set; }
+    [Parameter]
+    public string UserId { get; set; }
+    [Parameter]
+    public string UserEmail { get; set; }
+
+    public bool IsProcessing { get; set; } = false;
+    public NotificationDTO NotificationDTO { get; set; } = new();
+    public bool ShowErrors { get; set; } = false;
+    public string Errors { get; set; }
+
+    [CascadingParameter(Name = "Theme")]
+    public SettingsDTO CurrentSettings { get; set; } = new();
+
+    public bool IsLoading { get; set; } = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            var settings = await _localStorageService.GetItemAsync<SettingsDTO>(SD.Settings);
+            if (!settings.Theme.Equals(CurrentSettings.Theme))
+                CurrentSettings = settings;
+        }
+        else if (IsLoading)
+        {
+            CurrentSettings = await _localStorageService.GetItemAsync<SettingsDTO>(SD.Settings);
+            NotificationDTO.UserId = UserId;
+            NotificationDTO.UserEmail = UserEmail;
+
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task Create()
+    {
+        ShowErrors = false;
+        IsProcessing = true;
+        var created = await _notificationService.Create(NotificationDTO);
+        if (created.Id != 0)
+        {
+            await ModalOk();
+        }
+        else
+        {
+            Errors = "Something got wrong. Try later...";
+            ShowErrors = true;
+        }
+        IsProcessing = false;
+    }
+
+    private Task ModalCancel()
+    {
+        return OnClose.InvokeAsync(false);
+    }
+
+    private Task ModalOk()
+    {
+        return OnClose.InvokeAsync(true);
+    }
+}

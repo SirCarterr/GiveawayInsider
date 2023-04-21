@@ -1,0 +1,150 @@
+﻿@using System.Web
+@inject IAuthenticationService _authService
+
+<div class="modal fade show" id="ModalLogin" style="display:block; background-color: rgba(66, 66, 66, .5)">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            @if (IsForgotPassword)
+            {
+                <EditForm Model="ForgotPassword" OnValidSubmit="SendRecovery">
+                    <DataAnnotationsValidator></DataAnnotationsValidator>
+
+                    <div class="modal-header">
+                        <h5 class="modal-title">Forgot password</h5>
+                        <button type="button" @onclick="@ModalCancel" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (ShowErrors)
+                        {
+                            <p class="text-center text-danger">@Error</p>
+                        }
+
+                        <div class="py-2">
+                            <label class="form-label">Enter your account email to send recovery letter:</label>
+                            <InputText @bind-Value="ForgotPassword.Email" placeholder="Email..." class="form-control mb-2" />
+                            <ValidationMessage For="(() => ForgotPassword.Email)"></ValidationMessage>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        @if (IsProcessing)
+                        {
+                            <NavLink class="btn btn-outline-secondary" disabled>Cancel</NavLink>
+                            <button type="submit" class="btn btn-outline-dark" disabled>Send</button>
+                        }
+                        else
+                        {
+                            <NavLink class="btn btn-outline-secondary" @onclick="() => ForgotPasswordChange(false)">Cancel</NavLink>
+                            <button type="submit" class="btn btn-outline-dark">Send</button>
+                        }
+                    </div>
+                </EditForm>
+            }
+            else
+            {
+                <EditForm Model="SignInRequest" OnValidSubmit="LoginUser">
+                    <DataAnnotationsValidator></DataAnnotationsValidator>
+
+                    <div class="modal-header">
+                        <h5 class="modal-title">Login</h5>
+                        <button type="button" @onclick="@ModalCancel" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (ShowErrors)
+                        {
+                            <p class="text-center text-danger">@Error</p>
+                        }
+
+                        <div class="py-2">
+                            <InputText @bind-Value="SignInRequest.Username" placeholder="Email..." class="form-control mb-2" />
+                            <ValidationMessage For="(() => SignInRequest.Username)"></ValidationMessage>
+                        </div>
+                        <div class="py-2">
+                            <InputText @bind-Value="SignInRequest.Password" type="password" placeholder="Password..." class="form-control mb-2" />
+                            <ValidationMessage For="(() => SignInRequest.Password)"></ValidationMessage>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        @if (IsProcessing)
+                        {
+                            <NavLink class="btn btn-outline-secondary" disabled>Forgot password?</NavLink>
+                            <button type="submit" class="btn btn-outline-dark" disabled>Login</button>
+                        }
+                        else
+                        {
+                            <NavLink class="btn btn-outline-secondary" @onclick="() => ForgotPasswordChange(true)">Forgot password?</NavLink>
+                            <button type="submit" class="btn btn-outline-dark">Login</button>
+                        }
+                    </div>
+                </EditForm>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback<OnLoginCloseModel> OnClose { get; set; }
+
+    private SignInRequestDTO SignInRequest { get; set; } = new();
+    private ForgotPasswordModel ForgotPassword { get; set; } = new();
+    public bool IsProcessing { get; set; } = false;
+    public bool IsForgotPassword { get; set; } = false;
+    public bool ShowErrors { get; set; }
+    public string Error { get; set; }
+
+    private async Task LoginUser()
+    {
+        ShowErrors = false;
+        IsProcessing = true;
+        var result = await _authService.LoginUser(SignInRequest);
+        if (!result.IsAuthSuccessful)
+        {
+            Error = result.ErrorMessage;
+            ShowErrors = true;
+        }
+        else
+        {
+
+            await ModalOk();
+        }
+        IsProcessing = false;
+    }
+
+    private void ForgotPasswordChange(bool b)
+    {
+        IsForgotPassword = b;
+        StateHasChanged();
+    }
+
+    private async Task SendRecovery()
+    {
+        ShowErrors = false;
+        IsProcessing = true;
+        var result = await _authService.SendRecoveryLetter(ForgotPassword.Email);
+        if (result.IsSuccess)
+        {
+            await ModalRecovery();
+        }
+        else
+        {
+            Error = result.Errors;
+            ShowErrors = true;
+        }
+        IsProcessing = false;
+    }
+
+    private Task ModalCancel()
+    {
+        return OnClose.InvokeAsync(new() { IsSuccess = false });
+    }
+
+    private Task ModalOk()
+    {
+        return OnClose.InvokeAsync(new() { IsSuccess = true, Message = "Logged successfully!" });
+    }
+
+    private Task ModalRecovery()
+    {
+        return OnClose.InvokeAsync(new() { IsSuccess = true, Message = "Letter is sent!" });
+    }
+}

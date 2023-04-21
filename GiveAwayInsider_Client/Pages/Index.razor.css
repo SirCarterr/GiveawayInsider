@@ -1,0 +1,13 @@
+﻿.bg-image {
+    background-image: url(img/game-pc.png);
+    background-size: 1450px 750px;
+    background-position: 35% 50%;
+    height: 85%;
+}
+
+.bg-cards {
+    /*background-color: rgba(203, 204, 198, 0.9);*/
+    height: 90vh;
+    max-width: 65%;
+    min-width: 30%;
+}

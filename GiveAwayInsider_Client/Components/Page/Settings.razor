@@ -1,0 +1,100 @@
+﻿@inject ISettingsService _settingsService
+@inject AuthenticationStateProvider _authStateProvider
+@inject ILocalStorageService _localStorageService
+
+@if (!IsLoading)
+{
+    <div class="modal show" id="ModalSettigns" style="display:block; background-color: rgba(66, 66, 66, .5)">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="@(CurrentSettings.Theme.Equals("light") ? "" : "background-color: rgb(120, 120, 120)")">
+                <EditForm Model="SettingsDTO" OnSubmit="Save">
+                    <div class="modal-header">
+                        <h5 class="modal-title @(CurrentSettings.Theme.Equals("light") ? "" : "text-white")" id="ModalSettingsLabel">Create Notification</h5>
+                        <button type="button" @onclick="@ModalCancel" class="btn-close @(CurrentSettings.Theme.Equals("light") ? "" : "text-white")" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (ShowErrors)
+                        {
+                            <div>
+                                @foreach (var error in Errors)
+                                {
+                                    <p class="text-danger text-center">@error</p>
+                                }
+                            </div>
+                        }
+
+                        <div class="py-2">
+                            <label for="theme" class="form-label @(CurrentSettings.Theme.Equals("light") ? "" : "text-white")">Theme:</label>
+                            <InputSelect @bind-Value="SettingsDTO.Theme" class="form-control">
+                                <option value="light">Light</option>
+                                <option value="dark">Dark</option>
+                            </InputSelect>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        @if (IsProcessing)
+                        {
+                            <button type="submit" class="btn @(CurrentSettings.Theme.Equals("light") ? "btn-outline-dark" : "btn-primary")" disabled>Save</button>
+                        }
+                        else
+                        {
+                            <button type="submit" class="btn @(CurrentSettings.Theme.Equals("light") ? "btn btn-outline-dark" : "btn-primary")">Save</button>
+                        }
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public EventCallback<bool> OnClose { get; set; }
+
+    [CascadingParameter(Name = "Theme")]
+    public SettingsDTO CurrentSettings { get; set; } = new();
+
+    public bool IsLoading { get; set; } = true;
+    public bool IsProcessing { get; set; } = false;
+    public SettingsDTO SettingsDTO { get; set; } = new();
+    public bool ShowErrors { get; set; } = false;
+    public string Errors { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if(!firstRender)
+        {
+            var settings = await _localStorageService.GetItemAsync<SettingsDTO>(SD.Settings);
+            if (!settings.Theme.Equals(CurrentSettings.Theme))
+                CurrentSettings = settings;
+        }
+        else if (IsLoading)
+        {   
+            CurrentSettings = await _localStorageService.GetItemAsync<SettingsDTO>(SD.Settings);
+            var state = await _authStateProvider.GetAuthenticationStateAsync();
+            string userId = state.User.Claims.FirstOrDefault(c => c.Type.Equals("Id"))!.Value;
+            SettingsDTO = await _settingsService.Get(userId);
+
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    public async Task Save()
+    {
+        ShowErrors = false;
+        IsProcessing = true;
+        await _settingsService.Update(SettingsDTO);
+        await ModalOk();
+    }
+
+    private Task ModalCancel()
+    {
+        return OnClose.InvokeAsync(false);
+    }
+
+    private Task ModalOk()
+    {
+        return OnClose.InvokeAsync(true);
+    }
+}

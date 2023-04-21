@@ -1,0 +1,56 @@
+﻿@inject ILocalStorageService _localStorageService
+@inject AuthenticationStateProvider _authStateProvider
+
+@if (!IsLoading)
+{
+    <div class="col">
+        <div class="card my-2 mx-auto" style="@(CurrentSettings.Theme.Equals("light") ? "" : "background-color: rgb(120, 120, 120)")">
+            <img src="@GiveawayDTO.Image" class="card-img-top" alt="game image">
+            <div class="card-body">
+                <h5 class="card-title @(CurrentSettings.Theme.Equals("light") ? "" : "text-white")">@GiveawayDTO.Title</h5>
+                <p class="@(CurrentSettings.Theme.Equals("light") ? "" : "text-white")">@GiveawayDTO.Description</p>
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item @(CurrentSettings.Theme.Equals("light") ? "" : "text-white")" style="@(CurrentSettings.Theme.Equals("light") ? "" : "background-color: rgb(120, 120, 120)")">Type: @GiveawayDTO.Type</li>
+                <li class="list-group-item @(CurrentSettings.Theme.Equals("light") ? "" : "text-white")" style="@(CurrentSettings.Theme.Equals("light") ? "" : "background-color: rgb(120, 120, 120)")">Platform(s): @GiveawayDTO.Platforms</li>
+                <li class="list-group-item @(CurrentSettings.Theme.Equals("light") ? "" : "text-white")" style="@(CurrentSettings.Theme.Equals("light") ? "" : "background-color: rgb(120, 120, 120)")">Published: @GiveawayDTO.Published_Date</li>
+            </ul>
+            <div class="card-body">
+                <h5 class="@(CurrentSettings.Theme.Equals("light") ? "" : "text-white")">Instructions</h5>
+                <p class="@(CurrentSettings.Theme.Equals("light") ? "" : "text-white")">@GiveawayDTO.Instructions</p>
+                <a href="@GiveawayDTO.Open_Giveaway_Url" class="btn btn-primary" target="_blank">Loot</a>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public GiveawayDTO GiveawayDTO { get; set; }
+
+    public bool IsLoading { get; set; } = true;
+
+    [CascadingParameter(Name = "Theme")]
+    public SettingsDTO CurrentSettings { get; set; }
+
+    public AuthenticationState AuthState { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        AuthState = await _authStateProvider.GetAuthenticationStateAsync();
+        if (!firstRender && AuthState.User.Identity!.IsAuthenticated)
+        {
+            var settings = await _localStorageService.GetItemAsync<SettingsDTO>(SD.Settings);
+            if (!settings.Theme.Equals(CurrentSettings.Theme))
+                CurrentSettings = settings;
+        }
+        else if (IsLoading)
+        {
+            if (AuthState.User.Identity!.IsAuthenticated)
+                CurrentSettings = await _localStorageService.GetItemAsync<SettingsDTO>(SD.Settings);
+
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+}

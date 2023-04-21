@@ -1,0 +1,131 @@
+﻿@page "/notifications"
+@layout EmptyLayout
+@using Microsoft.AspNetCore.Authorization;
+@using System.Security.Claims;
+@attribute [Authorize]
+@inject INotificationService _notificationsService
+@inject IJSRuntime _jsRuntime
+@inject AuthenticationStateProvider _authStateProvider
+@inject ILocalStorageService _localStorageService
+
+@if (IsLoading)
+{
+    <div class="position-absolute top-50 start-50 translate-middle">
+        <img src="/img/illuminati.gif" width="128" height="128" alt="loading...">
+    </div>
+}
+else
+{
+    <div class="bg-notifications">
+        <div class="d-flex justify-content-center">
+            <div class="d-flex flex-column overflow-auto notifications-width p-2" style="background-color: @(CurrentSettings.Theme.Equals("light") ? "whitesmoke" : "rgba(110, 110, 110, 0.9)")">
+                @if (IsProcessing)
+                {
+                    <div class="position-absolute top-50 start-50 translate-middle">
+                        <img src="/img/illuminati.gif" width="128" height="128" alt="loading...">
+                    </div>
+                }
+                else
+                {
+                    <h3 class="p-2 text-center @(CurrentSettings.Theme.Equals("light") ? "" : "text-white")">Your notifications</h3>
+                    @if (Notifications.Count() < 5)
+                    {
+                        <div class="d-flex flex-row-reverse mx-2">
+                            <button type="button" class="btn btn-primary btn-sm my-auto" @onclick="() => OpenCreateDialog()">Create</button>
+                            <i class="p-2 @(CurrentSettings.Theme.Equals("light") ? "text-secondary" : "text-white")">Notification limit: 5</i>
+                            <NavLink class="btn btn-secondary btn-sm me-auto my-auto" href="/">Back</NavLink>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-row-reverse justify-content-between mx-2">
+                            <i class="@(CurrentSettings.Theme.Equals("light") ? "text-secondary" : "text-white")">You reached notification limit</i>
+                            <NavLink class="btn btn-secondary btn-sm" href="/">Back</NavLink>
+                        </div>
+                    }
+                    @if (Notifications.Any())
+                    {
+                        @foreach (var notification in Notifications)
+                        {
+                            <div class="list-group p-2" style="height: 100%">
+                                <div class="list-group-item border-secondary rounded my-2" style="@(CurrentSettings.Theme.Equals("light") ? "" : "background-color: rgb(120, 120, 120)")">
+                                    <Notification NotificationDTO="notification" OnUpdate="LoadNotifications"></Notification>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <h5 class="text-center p-3 mt-2 @(CurrentSettings.Theme.Equals("light") ? "" : "text-white")">You do not have any notification...</h5>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@if (IsOpenCreate)
+{
+    <CreateNotification OnClose="OnCreateDialogClose" UserId="@userId" UserEmail="@userEmail"></CreateNotification>
+}
+
+@code {
+    private string userId { get; set; }
+    private string userEmail { get; set; }
+    public bool IsProcessing { get; set; } = false;
+
+    private IEnumerable<NotificationDTO> Notifications { get; set; } = new List<NotificationDTO>();
+
+    public bool IsOpenCreate { get; set; } = false;
+
+    [CascadingParameter(Name = "Theme")]
+    public SettingsDTO CurrentSettings { get; set; } = new();
+
+    public bool IsLoading { get; set; } = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            var settings = await _localStorageService.GetItemAsync<SettingsDTO>(SD.Settings);
+            if (!settings.Theme.Equals(CurrentSettings.Theme))
+                CurrentSettings = settings;
+        }
+        else if (IsLoading)
+        {
+            CurrentSettings = await _localStorageService.GetItemAsync<SettingsDTO>(SD.Settings);
+
+            var state = await _authStateProvider.GetAuthenticationStateAsync();
+            userId = state.User.Claims.FirstOrDefault(c => c.Type.Equals("Id"))!.Value;
+            userEmail = state.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)!.Value;
+            IsLoading = false;
+            await LoadNotifications();
+        }
+    }
+
+    public async Task LoadNotifications()
+    {
+        IsProcessing = true;
+        StateHasChanged();
+        Notifications = await _notificationsService.Get(userId);
+        IsProcessing = false;
+        StateHasChanged();
+    }
+
+    private async void OnCreateDialogClose(bool accepted)
+    {
+        IsOpenCreate = false;
+        StateHasChanged();
+        if (accepted)
+        {
+            await LoadNotifications();
+            await _jsRuntime.InvokeVoidAsync("ShowSwalToast", "Notification created");
+        }
+    }
+
+    private void OpenCreateDialog()
+    {
+        IsOpenCreate = true;
+        StateHasChanged();
+    }
+}

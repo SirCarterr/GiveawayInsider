@@ -1,0 +1,94 @@
+﻿@inject IAuthenticationService _authService
+
+
+<div class="modal show" id="ModalRegister" style="display:block; background-color: rgba(66, 66, 66, .5)">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <EditForm Model="SignUpRequest" OnValidSubmit="RegisterUser">
+                <DataAnnotationsValidator></DataAnnotationsValidator>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ModalRegisterLabel">Register</h5>
+                    <button type="button" @onclick="@ModalCancel" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    @if (ShowRegistrationErrors)
+                    {
+                        <div>
+                            @foreach (var error in Errors)
+                            {
+                                <p class="text-danger text-center">@error</p>
+                            }
+                        </div>
+                    }
+
+                    <div class="py-2">
+                        <InputText @bind-Value="SignUpRequest.NickName" class="form-control" placeholder="Username..." />
+                        <ValidationMessage For="(() => SignUpRequest.NickName)" />
+                    </div>
+                    <div class="py-2">
+                        <InputText @bind-Value="SignUpRequest.Email" class="form-control" placeholder="Email..." />
+                        <ValidationMessage For="(() => SignUpRequest.Email)" />
+                    </div>
+                    <div class="form-row py-2">
+                        <div class="col">
+                            <InputText @bind-Value="SignUpRequest.Password" type="password" placeholder="Password..." class="form-control" />
+                            <ValidationMessage For="(() => SignUpRequest.Password)" />
+                        </div>
+                        <div class="col py-2">
+                            <InputText @bind-Value="SignUpRequest.ConfirmPassword" type="password" class="form-control" placeholder="Confirm Password..." />
+                            <ValidationMessage For="(() => SignUpRequest.ConfirmPassword)" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    @if (IsProcessing)
+                    {
+                        <button type="submit" class="btn btn-outline-dark" disabled>Register</button>
+                    }
+                    else
+                    {
+                        <button type="submit" class="btn btn-outline-dark">Register</button>
+                    }
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+
+@code {
+    [Parameter]
+    public EventCallback<bool> OnClose { get; set; }
+
+    private SignUpRequestDTO SignUpRequest { get; set; } = new();
+    public bool IsProcessing { get; set; } = false;
+    public bool ShowRegistrationErrors { get; set; }
+    public IEnumerable<string> Errors { get; set; }
+
+    private async Task RegisterUser()
+    {
+        ShowRegistrationErrors = false;
+        IsProcessing = true;
+        var result = await _authService.RegisterUser(SignUpRequest);
+        if (result.IsRegistrationSuccessful)
+        {
+            await ModalOk();
+        }
+        else
+        {
+            Errors = result.Errors;
+            ShowRegistrationErrors = true;
+        }
+        IsProcessing = false;
+    }
+
+    private Task ModalCancel()
+    {
+        return OnClose.InvokeAsync(false);
+    }
+
+    private Task ModalOk()
+    {
+        return OnClose.InvokeAsync(true);
+    }
+}

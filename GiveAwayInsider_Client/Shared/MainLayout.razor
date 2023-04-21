@@ -1,0 +1,48 @@
+﻿@inherits LayoutComponentBase
+@inject AuthenticationStateProvider _authStateProvider
+@inject ISettingsService _settingsService
+@inject ILocalStorageService _localStorageService
+
+<div class="d-flex flex-column">
+    <CascadingValue Value="SettingsDTO" Name="Theme">
+        <div style="height: 15%">
+            <CascadingValue Value="UpdateSettings" Name="OnUpdate">
+                <NavMenu @bind-Search="SuppliedValue" />
+            </CascadingValue>
+        </div>
+
+        <main style="height: 85%">
+            <article>
+                <CascadingValue Value="SuppliedValue" Name="Search">
+                    @Body
+                </CascadingValue>
+            </article>
+        </main>
+    </CascadingValue>
+</div>
+
+@code {
+    private string SuppliedValue { get; set; }
+
+    private SettingsDTO SettingsDTO { get; set; } = new();
+
+    private AuthenticationState State { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        State = await _authStateProvider.GetAuthenticationStateAsync();
+        if (State.User.Identity!.IsAuthenticated)
+            await UpdateSettings();
+    }
+
+    internal async Task UpdateSettings()
+    {
+        if (!State.User.Identity!.IsAuthenticated)
+            State = await _authStateProvider.GetAuthenticationStateAsync();
+
+        string userId = State.User.Claims.FirstOrDefault(c => c.Type.Equals("Id"))!.Value;
+        SettingsDTO = await _settingsService.Get(userId);
+        await _localStorageService.SetItemAsync(SD.Settings, SettingsDTO);
+        StateHasChanged();
+    }
+}

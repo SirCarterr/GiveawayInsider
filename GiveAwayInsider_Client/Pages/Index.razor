@@ -1,0 +1,155 @@
+﻿@page "/"
+@using GiveAwayInsider_Business.Service.IService;
+@using Microsoft.AspNetCore.Authorization;
+@inject IGiveawayService _giveawayService
+@inject ISearchService _searchService
+@inject IJSRuntime _jsRuntime
+@inject ILocalStorageService _localStorageService
+@inject AuthenticationStateProvider _authStateProvider
+
+@if (IsLoading)
+{
+    <div class="position-absolute top-50 start-50 translate-middle">
+        <img src="/img/illuminati.gif" width="128" height="128" alt="loading...">
+    </div>
+}
+else
+{
+    <div class="bg-image">
+        <div class="d-flex justify-content-center">
+            <div class="d-flex flex-column p-2 bg-cards" style="overflow-x: hidden; overflow-y: auto; background-color: @(CurrentSettings.Theme.Equals("light") ? "rgba(203, 204, 198, 0.9)" : "rgba(110, 110, 110, 0.9)")">
+                @if (IsProcessing)
+                {
+                    <div class="position-absolute top-50 start-50 translate-middle">
+                        <img src="/img/illuminati.gif" width="128" height="128" alt="loading...">
+                    </div>
+                }
+                else
+                {
+                    @if (Giveaways.Any())
+                    {
+                        <div class="row justify-content-start row-cols-1 row-cols-md-2 row-cols-lg-2 p-2">
+                            @foreach (var giveaway in Giveaways)
+                            {
+                                <GameCard GiveawayDTO="giveaway"></GameCard>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <h3 class="text-center p-3">There is no nothing to loot right now🥲</h3>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+}
+
+
+@code {
+    private string searchPhrase;
+
+    [CascadingParameter(Name = "Search")]
+    public string SearchPhrase
+    {
+        get { return searchPhrase; }
+        set
+        {
+            if (value == null)
+                searchPhrase = "";
+            else if (!searchPhrase.Equals(value))
+            {
+                searchPhrase = value;
+                LoadSearch();
+            }
+            else
+                searchPhrase = value;
+        }
+    }
+
+    [CascadingParameter(Name = "Theme")]
+    public SettingsDTO CurrentSettings { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "phrase")]
+    public string Phrase { get; set; }
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "platform")]
+    public string Platform { get; set; }
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "type")]
+    public string Type { get; set; }
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "sortBy")]
+    public string Sort { get; set; }
+
+    public SearchDTO Search { get; set; } = new() { SortBy = "popularity" };
+
+    private List<GiveawayDTO> Giveaways { get; set; } = new();
+
+    public bool IsProcessing { get; set; } = false;
+    public bool IsLoading { get; set; } = true;
+    public string Error { get; set; }
+
+    public AuthenticationState AuthState { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        AuthState = await _authStateProvider.GetAuthenticationStateAsync();
+        if (!firstRender && AuthState.User.Identity!.IsAuthenticated)
+        {
+            var settings = await _localStorageService.GetItemAsync<SettingsDTO>(SD.Settings);
+            if (!settings.Theme.Equals(CurrentSettings.Theme))
+                CurrentSettings = settings;
+        }
+        else if (IsLoading)
+        {
+            if (AuthState.User.Identity!.IsAuthenticated)
+                CurrentSettings = await _localStorageService.GetItemAsync<SettingsDTO>(SD.Settings);
+
+            CheckQueryParameters();
+            IsLoading = false;
+            await LoadGiveaways();
+        }
+    }
+
+    private async Task LoadGiveaways()
+    {
+        IsProcessing = true;
+        StateHasChanged();
+
+        var result = await _giveawayService.GetGiveaways(Search.Platform, Search.Type, Search.SortBy);
+        if (result.IsSuccess)
+        {
+            if (string.IsNullOrEmpty(Search.Search))
+                Giveaways = (List<GiveawayDTO>)result.Data;
+            else
+                Giveaways = ((List<GiveawayDTO>)result.Data).Where(s => s.Title.ToLower().Contains(Search.Search)).ToList();
+        }
+        IsProcessing = false;
+        StateHasChanged();
+        if (!string.IsNullOrEmpty(result.Errors))
+            await _jsRuntime.InvokeVoidAsync("ShowSwalToast3", result.Errors);
+    }
+
+    private async void LoadSearch()
+    {
+        if (searchPhrase != null)
+        {
+            Search = _searchService.GetSearchModel(SearchPhrase);
+            await LoadGiveaways();
+        }
+    }
+
+    private void CheckQueryParameters()
+    {
+        if (!string.IsNullOrEmpty(Phrase))
+            Search.Search = Phrase;
+        if (!string.IsNullOrEmpty(Platform))
+            Search.Platform = Platform;
+        if (!string.IsNullOrEmpty(Type))
+            Search.Type = Type;
+        if (!string.IsNullOrEmpty(Sort))
+            Search.SortBy = Sort;
+    }
+}

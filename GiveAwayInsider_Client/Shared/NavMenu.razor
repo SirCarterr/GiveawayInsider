@@ -1,0 +1,168 @@
+﻿@inject IJSRuntime _jsRuntime
+@inject ILocalStorageService _localStorageService
+@inject AuthenticationStateProvider _authStateProvider
+
+@if (!IsLoading)
+{
+    <nav class="navbar" style="background-color: @(CurrentSettings.Theme.Equals("light") ? "#fcd912" : "rgb(140, 140, 140)")">
+        <div class="container-fluid">
+            <a class="ms-2">
+                <img src="/img/illuminati.png" alt="Giveaway Insider" width="64" height="64" />
+            </a>
+            <div class="d-inline-flex ms-auto">
+                <div class="input-group">
+                    <input type="text" class="" @oninput="(ChangeEventArgs e) => ChangeSeacrh(e.Value.ToString())" @onkeypress="@((KeyboardEventArgs e) => StartSearch(e))" placeholder="search..." />
+                    <button type="button" class="btn btn-primary" @onclick="() => OnInfoClick()">
+                        <span class="oi oi-info"></span>
+                    </button>
+                </div>
+            </div>
+            <AuthorizeView>
+                <NotAuthorized>
+                    <div class="dropstart ms-auto">
+                        <a class="btn dropdown-toggle" role="button" id="accountDropdown1" data-bs-toggle="dropdown" style="font-size: x-large">
+                            <span class="oi oi-person @(CurrentSettings.Theme.Equals("light") ? "" : "text-white")"></span>
+                        </a>
+
+                        <ul class="dropdown-menu" aria-labelledby="accountDropdown1">
+                            <li><button class="dropdown-item" @onclick="() => OpenLoginDialog()">Login</button></li>
+                            <li><button class="dropdown-item" @onclick="() => OpenRegisterDialog()">Register</button></li>
+                        </ul>
+                    </div>
+                </NotAuthorized>
+                <Authorized>
+                    <div class="dropstart ms-auto">
+                        <button class="btn dropdown-toggle @(CurrentSettings.Theme.Equals("light") ? "" : "text-white")" role="button" id="accountDropdown2" data-bs-toggle="dropdown" style="font-size: x-large">
+                            @context.User.Identity!.Name
+                        </button>
+
+                        <ul class="dropdown-menu" aria-labelledby="accountDropdown2">
+                            <li><NavLink class="dropdown-item" href="/notifications">Notifications</NavLink></li>
+                            <li><button type="button" class="dropdown-item" @onclick="() => OpenSettingsDialog()">Settings</button></li>
+                            <li><NavLink class="dropdown-item" href="/logout">Logout</NavLink></li>
+                        </ul>
+                    </div>
+                </Authorized>
+            </AuthorizeView>
+        </div>
+    </nav>
+}
+
+@if (IsOpenRegisterDialog)
+{
+    <Register OnClose="@OnRegisterDialogClose"></Register>
+}
+@if (IsOpenLoginDialog)
+{
+    <Login OnClose="@OnLoginDialogClose"></Login>
+}
+<AuthorizeView>
+    <Authorized>
+        @if (IsOpenSettingsDialog)
+        {
+            <Settings OnClose="@OnSettingsDialogClose"></Settings>
+        }
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    public bool IsOpenRegisterDialog { get; set; } = false;
+    public bool IsOpenLoginDialog { get; set; } = false;
+    public bool IsOpenSettingsDialog { get; set; } = false;
+
+    public bool IsLoading { get; set; } = true;
+
+    [Parameter]
+    public string Search { get; set; }
+    [Parameter]
+    public EventCallback<string> SearchChanged { get; set; }
+
+    [CascadingParameter(Name = "Theme")]
+    public SettingsDTO CurrentSettings { get; set; }
+    [CascadingParameter(Name = "OnUpdate")]
+    public Func<Task> OnSettingsSave { get; set; }
+
+    public AuthenticationState AuthState { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        AuthState = await _authStateProvider.GetAuthenticationStateAsync();
+        if (!firstRender && AuthState.User.Identity!.IsAuthenticated)
+        {
+            var settings = await _localStorageService.GetItemAsync<SettingsDTO>(SD.Settings);
+            if (!settings.Theme.Equals(CurrentSettings.Theme))
+                CurrentSettings = settings;
+        }
+        else if (IsLoading)
+        {
+            if (AuthState.User.Identity!.IsAuthenticated)
+                CurrentSettings = await _localStorageService.GetItemAsync<SettingsDTO>(SD.Settings);
+
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private Task StartSearch(KeyboardEventArgs e)
+    {
+        //Search = search;
+        if (e.Key.ToLower().Equals("enter"))
+            return SearchChanged.InvokeAsync(Search);
+        return Task.CompletedTask;
+    }
+
+    private void ChangeSeacrh(string value) => Search = value;
+
+    private async void OnRegisterDialogClose(bool accepted)
+    {
+        IsOpenRegisterDialog = false;
+        StateHasChanged();
+        if (accepted)
+            await _jsRuntime.InvokeVoidAsync("ShowSwalToast", "Account created");
+    }
+
+    private void OpenRegisterDialog()
+    {
+        IsOpenRegisterDialog = true;
+        StateHasChanged();
+    }
+
+    private async void OnLoginDialogClose(OnLoginCloseModel onLoginClose)
+    {
+        IsOpenLoginDialog = false;
+        StateHasChanged();
+        if (onLoginClose.IsSuccess)
+        {
+            await OnSettingsSave.Invoke();
+            await _jsRuntime.InvokeVoidAsync("ShowSwalToast", onLoginClose.Message);
+        }
+    }
+
+    private void OpenLoginDialog()
+    {
+        IsOpenLoginDialog = true;
+        StateHasChanged();
+    }
+
+    private async void OnSettingsDialogClose(bool accepted)
+    {
+        IsOpenSettingsDialog = false;
+        StateHasChanged();
+        if (accepted)
+        {
+            await OnSettingsSave.Invoke();
+            await _jsRuntime.InvokeVoidAsync("ShowSwalToast", "Settings saved");
+        }
+    }
+
+    private void OpenSettingsDialog()
+    {
+        IsOpenSettingsDialog = true;
+        StateHasChanged();
+    }
+
+    private async void OnInfoClick() 
+    {
+        await _jsRuntime.InvokeVoidAsync("ShowSwalInfo", SD.Search_Instriction_html);
+    }
+}

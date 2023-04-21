@@ -1,0 +1,11 @@
+﻿.bg-notifications {
+    background-image: url(img/game-controller-pattern.png);
+    background-size: 1500px 1200px;
+    height: 100vh;
+}
+
+.notifications-width {
+    height: 100vh;
+    min-width: 40%;
+    max-height: 75%;
+}

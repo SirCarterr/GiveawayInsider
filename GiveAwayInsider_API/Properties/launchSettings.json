@@ -1,0 +1,32 @@
+{
+  "profiles": {
+    "GiveAwayInsider_API": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "SEND_GRID_KEY": "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"
+      },
+      "dotnetRunMessages": true,
+      "applicationUrl": "https://localhost:7131;http://localhost:5032"
+    },
+    "IIS Express": {
+      "commandName": "IISExpress",
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  },
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "iisSettings": {
+    "windowsAuthentication": false,
+    "anonymousAuthentication": true,
+    "iisExpress": {
+      "applicationUrl": "http://localhost:23539",
+      "sslPort": 44357
+    }
+  }
+}

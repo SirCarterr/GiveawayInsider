@@ -1,0 +1,14 @@
+﻿@page "/logout"
+@layout EmptyLayout
+@inject IAuthenticationService _authService
+@inject IJSRuntime _jsRuntime
+@inject NavigationManager _navigationManager
+
+@code {
+    protected async override Task OnInitializedAsync()
+    {
+        await _authService.LogoutUser();
+        _navigationManager.NavigateTo("/");
+        await _jsRuntime.InvokeVoidAsync("ShowSwalToast2", "You signed Out");
+    }
+}

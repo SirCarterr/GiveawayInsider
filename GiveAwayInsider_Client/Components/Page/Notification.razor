@@ -1,0 +1,116 @@
+﻿@inject INotificationService _notificationService
+@inject IJSRuntime _jsRuntime
+@inject AuthenticationStateProvider _authStateProvider
+@inject ILocalStorageService _localStorageService
+
+@if (!IsLoading)
+{
+    <div class="d-flex flex-column" style="@(CurrentSettings.Theme.Equals("light") ? "" : "background-color: rgb(120, 120, 120)")">
+        <EditForm Model="NotificationDTO" OnValidSubmit="Update">
+            <DataAnnotationsValidator></DataAnnotationsValidator>
+
+            <div class="my-2">
+                <label for="search" class="form-label @(CurrentSettings.Theme.Equals("light") ? "" : "text-white")">Phrase</label>
+                <InputText class="form-control" id="search" @bind-Value="NotificationDTO.Search" disabled="@(!IsEdit)"></InputText>
+                <ValidationMessage For="() => NotificationDTO.Search"></ValidationMessage>
+            </div>
+
+            <div class="my-2">
+                <label for="platform" class="form-label @(CurrentSettings.Theme.Equals("light") ? "" : "text-white")">Platform</label>
+                <InputText class="form-control" id="platform" @bind-Value="NotificationDTO.Platform" disabled="@(!IsEdit)"></InputText>
+                <ValidationMessage For="(() => NotificationDTO.Platform)" />
+            </div>
+
+            <div class="my-2">
+                <label for="type" class="form-label @(CurrentSettings.Theme.Equals("light") ? "" : "text-white")">Type</label>
+                <InputText class="form-control" id="type" @bind-Value="NotificationDTO.Type" disabled="@(!IsEdit)"></InputText>
+                <ValidationMessage For="(() => NotificationDTO.Type)" />
+            </div>
+
+            <div class="my-2">
+                <label for="sort" class="form-label @(CurrentSettings.Theme.Equals("light") ? "" : "text-white")">Sort by</label>
+                <InputSelect class="form-select" id="sort" @bind-Value="NotificationDTO.Sort" disabled="@(!IsEdit)">
+                    <option value=""></option>
+                    <option value="popularity">Popularity</option>
+                    <option value="date">Date</option>
+                    <option value="value">Value</option>
+                </InputSelect>
+            </div>
+
+            <div class="my-2 d-flex p-2">
+                <p class="@(CurrentSettings.Theme.Equals("light") ? "" : "text-white")">Disabled: </p>
+                <InputCheckbox class="form-check-input mx-2" @bind-Value="NotificationDTO.IsDisabled" disabled="@(!IsEdit)"></InputCheckbox>
+            </div>
+
+            <div class="d-flex flex-row-reverse p-2">
+                @if (IsEdit)
+                {
+                    <button type="submit" class="btn btn-primary mx-2">Update</button>
+                    <NavLink class="btn btn-secondary mx-2" @onclick="() => ChangeEdit(false)">Cancel</NavLink>
+                }
+                else
+                {
+                    <NavLink class="btn btn-warning mx-2" @onclick="() => ChangeEdit(true)">Edit</NavLink>
+                    <NavLink class="btn btn-danger mx-2" @onclick="() => Delete()">Delete</NavLink>
+                }
+            </div>
+        </EditForm>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public NotificationDTO NotificationDTO { get; set; }
+
+    [Parameter]
+    public EventCallback OnUpdate { get; set; }
+
+    public bool IsEdit { get; set; } = false;
+
+    [CascadingParameter(Name = "Theme")]
+    public SettingsDTO CurrentSettings { get; set; } = new();
+
+    public bool IsLoading { get; set; } = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            var settings = await _localStorageService.GetItemAsync<SettingsDTO>(SD.Settings);
+            if (!settings.Theme.Equals(CurrentSettings.Theme))
+                CurrentSettings = settings;
+        }
+        else if (IsLoading)
+        {
+            CurrentSettings = await _localStorageService.GetItemAsync<SettingsDTO>(SD.Settings);
+
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ChangeEdit(bool value)
+    {
+        IsEdit = value;
+        StateHasChanged();
+    }
+
+    private async Task Delete()
+    {
+        var isDeleted = await _notificationService.Delete(NotificationDTO.Id);
+        if (isDeleted)
+        {
+            await OnUpdate.InvokeAsync();
+            await _jsRuntime.InvokeVoidAsync("ShowSwalToast2", "Notification deleted");
+        }
+        else
+            await _jsRuntime.InvokeVoidAsync("ShowSwalToast3", "Cannot delete notification");
+    }
+
+    private async Task Update()
+    {
+        await _notificationService.Update(NotificationDTO);
+        await OnUpdate.InvokeAsync();
+        await _jsRuntime.InvokeVoidAsync("ShowSwalToast", "Notification updated");
+    }
+}
