@@ -38,7 +38,7 @@ namespace GiveAwayInsider_API
             builder.Services.AddHttpClient();
             builder.Services.AddSendGrid(opt =>
             {
-                opt.ApiKey = Environment.GetEnvironmentVariable("SEND_GRID_KEY");
+                opt.ApiKey = "<your sendgrid apikey>";
             });
             builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
             builder.Services.AddScoped<IDbInitializer, DbInitializer>();
@@ -105,31 +105,34 @@ namespace GiveAwayInsider_API
                 });
             });
 
-            builder.Services.AddCors(o => o.AddPolicy("Insider", builder =>
-            {
-                builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
-            }));
-
             builder.Services.AddRouting(opt => opt.LowercaseUrls = true);
+
+            builder.Services.AddCors(o => o.AddDefaultPolicy(builder =>
+            {
+                builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+            }));
 
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseSwagger();
-                app.UseSwaggerUI();
-            }
+            app.UseSwagger();
+            app.UseSwaggerUI();
 
             app.UseHttpsRedirection();
-            app.UseCors("Insider");
             app.UseRouting();
+            app.UseCors();
 
             SeedDatabase();
             app.UseAuthentication();
             app.UseAuthorization();
 
+            //app.UseEndpoints(endpoints =>
+            //{
+            //    endpoints.MapControllers();
+            //});
             app.MapControllers();
+            app.UseDeveloperExceptionPage();
+            app.UseHsts();
 
             app.Run();
 

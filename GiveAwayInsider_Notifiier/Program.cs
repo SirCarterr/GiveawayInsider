@@ -17,7 +17,7 @@ namespace GiveAwayInsider_Notifiier
 
         public static async Task Main(string[] args)
         {
-            _client.DefaultRequestHeaders.Add("X-API-Key", "1w2h2o5l2e0r6e6d6");
+            _client.DefaultRequestHeaders.Add("X-API-Key", "<your custom apikey>");
             INotificationService notificationService = new NotificationService(_client);
             INotifierService notifierService = new NotifierService(_client);
             Console.WriteLine("Notifier started\n");
