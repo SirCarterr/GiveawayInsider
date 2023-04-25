@@ -361,3 +361,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/GiveAwayInsider_API/Properties/Resources.resx
+/GiveAwayInsider_API/Properties/serviceDependencies.json
+/GiveAwayInsider_API/Properties/ServiceDependencies/GiveAwayInsiderAPI20230424 - Web Deploy/apis1.arm.json
+/GiveAwayInsider_API/Properties/ServiceDependencies/GiveAwayInsiderAPI20230424 - Web Deploy/profile.arm.json
+/GiveAwayInsider_Client/Properties/ServiceDependencies/GiveAwayInsiderClient20230424 - Web Deploy/profile.arm.json
+/GiveAwayInsider_Notifiier/Properties/ServiceDependencies/GiveAwayInsiderNotifiier20230425 - Web Deploy/profile.arm.json
