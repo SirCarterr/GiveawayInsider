@@ -10,7 +10,7 @@ Registered users can create notifications (up to 5) on specific search of giveaw
 Information about giveaways used from GamePowerAPI: https://www.gamerpower.com/api-read
 
 To configure on local host:
-- In GiveAwayInsider_API/Helper/ApiKeyProvider and GiveAwayInsider_Nofifier/Program.cs specify yours custom api key (instead of "<your api key>");
+- In GiveAwayInsider_API/Helper/ApiKeyProvider and GiveAwayInsider_Nofifier/Program.cs specify yours custom api key (instead of "your api key");
 - In GiveAwayInsider_API/Program.cs in email service add your SendGrid api key;
 - Start GiveAwayInsider_API project to migrate database (if not migrated, update database via pm);
 - Done, you can start all 3 projects (GiveAwayInsider_API, GiveAwayInsider_Client, GiveAwayInsider_Notifier) and use the web apps;
