@@ -17,14 +17,14 @@ namespace GiveAwayInsider_Notifiier
 
         public static async Task Main(string[] args)
         {
-            _client.DefaultRequestHeaders.Add("X-API-Key", "<your custom apikey>");
+            _client.DefaultRequestHeaders.Add("X-API-Key", "1w2h2o5l2e0r6e6d6");
             INotificationService notificationService = new NotificationService(_client);
             INotifierService notifierService = new NotifierService(_client);
             Console.WriteLine("Notifier started\n");
 
             while (true)
             {
-                if (DateTime.Now.Hour == 12)
+                if (DateTime.Now.Hour == 12 && DateTime.Now.Minute == 8)
                 {
                     Console.WriteLine("Notifying started:");
                     IEnumerable<NotificationDTO> notifications = await notificationService.GetNotifications();
@@ -36,7 +36,7 @@ namespace GiveAwayInsider_Notifiier
                         Thread.Sleep(500);
                     }
                     Console.WriteLine("Notifying ended\n");
-                    Thread.Sleep(TimeSpan.FromMinutes(2));
+                    Thread.Sleep(TimeSpan.FromHours(1));
                 }
             }
         }

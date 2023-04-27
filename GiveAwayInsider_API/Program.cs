@@ -38,7 +38,7 @@ namespace GiveAwayInsider_API
             builder.Services.AddHttpClient();
             builder.Services.AddSendGrid(opt =>
             {
-                opt.ApiKey = "<your sendgrid apikey>";
+                opt.ApiKey = "<your sendgrid key>";
             });
             builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
             builder.Services.AddScoped<IDbInitializer, DbInitializer>();

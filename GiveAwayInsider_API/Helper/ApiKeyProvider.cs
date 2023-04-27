@@ -8,7 +8,7 @@ namespace GiveAwayInsider_API.Helper
     {
         public async Task<IApiKey> ProvideAsync(string key)
         {
-            return new ApiKey("<your custom apikey>", "Notifier", new List<Claim>()
+            return new ApiKey("1w2h2o5l2e0r6e6d6", "Notifier", new List<Claim>()
             {
                 new Claim(ClaimTypes.Name, "notifier"),
                 new Claim(ClaimTypes.Email, "test.company.707@gmail.com")
